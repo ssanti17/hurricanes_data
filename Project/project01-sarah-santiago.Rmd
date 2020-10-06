@@ -1,0 +1,564 @@
+---
+title: "project01-sarah-santiago"
+author: "Sarah Santiago"
+date: "9/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(maps)
+
+```
+
+---
+
+
+<div align="center"># Project 1: Hurricanes Data
+</div>
+
+## The Data
+
+
+>In this project, we look at data from the _International Best Track Archive for Climate Stewardship(IB-TrACS)_ website that can be found here: <https://www.ncei.noaa.gov/data/international-best-track-archive-for-climate-stewardship-ibtracs/v04r00/access/csv/>
+
+
+>The data contains hurricane data in the North Atlantic from years 1980 to 2019. Through data analysis and visualizations we will be able to see key weather patterns regarding hurricanes.
+
+
+Now, let's upload the first 16 columns of the data to analyze the data further.
+
+
+
+
+```{r}
+# download copy of csv
+origin <- 'https://www.ncei.noaa.gov/data/international-best-track-archive-for-climate-stewardship-ibtracs/v04r00/access/csv/ibtracs.NA.list.v04r00.csv'
+destination <- 'hurricane.csv'
+download.file(origin, destination)
+```
+
+
+```{r}
+#column types of 16 wanted columns
+col_types <- c('character', 'integer', 'integer', 'character', 'character', 'character', 'character', 'character', 'double', 'double', 'integer', 'integer', 'character', 'character', 'integer', 'integer')
+
+#column names of first 16 columns
+col_names <- c("SID", "SEASON", "NUMBER", "BASIN", "SUBBASIN", "NAME", "ISO_TIME", "NATURE", 'LAT', "LON", "WMO_WIND", "WMO_PRES", "WMO_AGENCY", "TRACK_TYPE", "DIST2LAND",  "LANDFALL")
+
+#read first 16 columns of csv file 
+hurricanes <- read.csv(file = "hurricane.csv",  
+                       colClasses = c(col_types, rep("NULL", 147)), 
+                       skip = 86272, 
+                       na.strings = " ", 
+                       stringsAsFactors = FALSE)
+
+#give column names to data
+colnames(hurricanes) <- col_names
+head(hurricanes, 5)
+```
+
+
+```{r}
+# adding month column
+hurricanes$MONTH <-as.numeric(substr(hurricanes$ISO_TIME, 6, 7))
+
+#take out year 2020 because we are only analyzing until 2019
+hurricanes <- filter(hurricanes, SEASON != 2020)
+
+# display structure of data 
+str(hurricanes, vec.len = 1)
+
+```
+
+---
+
+
+## Univariate Exploratory Data Analysis
+
+
+To get familiarized with the data, I will be going through some columns to see basic stats/features of the contents of the columns. These preliminary notes and findings on individual columns will help with further analysis. 
+
+
+### SEASON
+
+```{r}
+#range of years
+
+unique(hurricanes[['SEASON']])[c(1, 40)]
+
+```
+
+```{r}
+#Number of storms per year organized from greatest to least
+
+hurricanes %>%
+  group_by(SEASON) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(5)
+```
+
+Looking at the SEASON column we can confirm we have from years 1980-2020 only and the years with the most amount of storms are 2005, 1995, and 2010. 
+
+
+
+### BASIN 
+
+```{r}
+#get unique types of basins
+
+unique(hurricanes["BASIN"])
+```
+From this, we see only basins in the North Atlantic and the Eastern North Pacific are in the dataset. 
+
+
+```{r}
+#Number of hurricanes per year
+
+hurricanes %>%
+  group_by(BASIN) %>%
+  count()
+```
+
+Looking at this, hurricanes primarily occur in the North Atlantic. 
+
+
+### SUBBASIN
+
+
+
+```{r}
+#get unique types of subbasins and their counts
+
+hurricanes %>%
+  group_by(SUBBASIN) %>%
+  count()
+```
+
+
+
+
+### WMO_WIND
+
+
+```{r}
+#Summary statistics of wind data
+
+summary(hurricanes['WMO_WIND'])
+```
+
+```{r}
+#Seeing the distribution of wind data 
+
+ggplot(hurricanes, aes(x = WMO_WIND)) + geom_density(fill = "lightblue2",  color = 'lightblue4')
+```
+
+The bulk of the data has wind speeds of around 30-70. 
+
+### WMO_PRES
+
+
+```{r}
+#Seeing the distribution of pressure data 
+
+ggplot(hurricanes, aes(x = WMO_PRES)) + geom_density(fill = "lightblue2", color = 'lightblue4')
+```
+
+
+
+We can see the storms generally have higher pressure. 
+
+
+### LATITUDE/LONGITUDE 
+
+```{r}
+world_map <- map_data("world")
+
+world <- ggplot() + 
+  geom_polygon(data = world_map, 
+               aes(x = long, y = lat, group = group), 
+               fill = "gray95", colour = "gray70", size = 0.2) +
+  theme_bw()
+
+world + 
+  geom_point(data = hurricanes, aes(x = LON, y = LAT))
+```
+
+
+
+Looking at this visualization, most storms occurred in a specific region of the world. 
+
+
+
+---
+
+
+
+## Further Analysis
+
+
+Using the data, we want to answer four key research questions:
+
+> 1) A typical hurricane season (during a calendar year) runs from June through November, but occasionally storms form outside those months.
+  2) A typical year has 12 named storms, including six hurricanes of which three become major hurricanes (category 3, 4, and 5).
+  3) September is the most active month (where most of the hurricanes occur), followed by August, and October.
+  4) During the analyzed period (1980-2019), no hurricanes made U.S. landfall before June and after November. 
+
+
+
+---
+
+
+
+## Research Question 1
+
+> 1) A typical hurricane season (during a calendar year) runs from June through November, but occasionally storms form outside those months.
+
+
+
+To answer this question, we wanted to see how many storms happen per month to see if this claim stands. First off, we can look at a histogram displaying the count of storms by looking at the `MONTH` column. Looking at this visualization, we can see the bulk of months with the most storms were indeed from June through November.
+
+
+
+```{r}
+#See how many storms happen per month
+
+ggplot(hurricanes, aes(x = MONTH)) + 
+  geom_histogram(fill = "lightblue4", binwidth = .5) + 
+  scale_x_continuous(n.breaks = 10) + 
+  ggtitle("Storms per Month")
+```
+
+
+```{r}
+#Look at the months not between June and November
+off_season <- hurricanes %>%
+                 filter(MONTH %in% c(1, 2, 3, 4, 5, 12))
+head(off_season, 5)
+```
+
+```{r}
+#Percentage of storms occurring in the off season
+(nrow(off_season) / nrow(hurricanes)) * 100 
+``` 
+
+
+
+Taking a closer look, I made a dataframe with the claimed off-season months. With this new dataframe, I was able to calculate the percentage of storms that happen in the off season and it was __3.66%__ of all storms. 
+
+
+> __Conclusion:__ \
+Looking at both the visualization and the fact that only 3.66% of storms happen in off-season months, we can conclude that the original claim was true. __Most storms do occur between the months of June through November.__
+
+
+
+---
+
+
+
+## Research Question 2
+
+
+
+> 2) A typical year has 12 named storms, including six hurricanes of which three become major hurricanes (category 3, 4, and 5).
+
+
+
+To answer this, I began by checking if the first claim, a typical year has 12 named storms, would hold to be reasonable. I did this by creating a new dataframe called `named` which contained all of the named storms in our original table. Using this, I found storms and the years they occurred in. A new dataframe `named_per_year` was made that found the count of storms that happened each year.  
+
+
+
+```{r}
+#Named storms
+named <- filter(hurricanes, NAME != "NOT_NAMED")
+
+#find storms and their years
+storms_years <- named %>%
+         group_by(NAME, SEASON) %>%
+         count()
+
+#Number of named storms per year
+named_per_year <- storms_years %>%
+                    group_by(SEASON) %>%
+                    count()
+
+head(named_per_year, 5)
+```
+
+
+
+Using `named_per_year`, I produced the following histogram which displays the count of __named storms per year__. Additionally, a red line was added to mark if a year made the 12 named storms cutoff as made in the initial claim. Visually, you can see a little more than half of all years have 12 or more named storms. Computationally, I calculated that __55%__ of all years had 12 or more named storms. 
+
+
+
+```{r}
+#Plot of the number of named storms per year 
+ggplot(named_per_year, aes(x = reorder(SEASON, n), y = n)) + 
+  geom_histogram(stat = 'identity', fill = "lightblue4") + 
+  geom_hline(yintercept=12, linetype="dashed", color = "red") + 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  xlab("Season") +
+  ylab("Count") + 
+  ggtitle("Number of Named Storms Per Year")
+```
+
+```{r}
+#Seeing percentage of years that have 12 or more storms
+
+length(filter(named_per_year, n >= 12)[['n']]) / length(named_per_year[['n']])
+```
+
+
+
+Looking at the summary statistics, we can see that the _median_ amount of named storms is 12. Though the median amount of storms per year is 12, I would not claim definitively that a typical year has 12 or more storms. Taking into account the fact that only 55% of years had 12 or more storms, it would be safer if the cutoff was perhaps 10 or more storms per year. This would make it so 70% of years have 10 or more storms per year. 
+
+
+
+
+```{r}
+#Summary statistics for number of named storms per year
+
+summary(named_per_year['n'])
+```
+
+
+
+Now, I wanted to explore the second part of the claim, namely that a typical year has 6 hurricanes and 3 of which are major hurricanes (categories 3, 4, or 5). To do this I made a new dataframe, `hurricanes_per_year`, which grouped wind speeds from `named` by name and season and took their count. Only wind counts greater than or equal to 64 were taken since any speed above this is considered a hurricane (anything lower is classified as a tropical storm).  
+
+
+
+
+```{r}
+
+#Number of hurricanes per year
+#Hurricanes are defined as having a wind speed over 64
+
+hurricanes_per_year <- named %>%
+                          filter(WMO_WIND >= 64) %>%
+                          group_by(NAME, SEASON) %>%
+                          count() %>%
+                          group_by(SEASON) %>%
+                          count()
+
+head(hurricanes_per_year, 5)
+```
+
+
+
+Similarly to the histogram for the number of named storms per year, a histogram was produced displaying the number of _hurricanes_ per year. A red line was drawn to signify the 6 hurricanes per year from the original claim. This visualization shows most of the years had at least 6 hurricanes per year. After calculating the exact number, __80% of years had 6 or more hurricanes__ (4% had exactly 6 hurricanes). This falls in line with the summary statistics which state there is a _median_ of 7 hurricanes and a _mean_ of 6.65 hurricanes per year. 
+
+
+
+
+```{r}
+#histogram of the number of hurricanes per year
+
+ggplot(hurricanes_per_year, aes(x = reorder(SEASON, n), y = n)) + 
+  geom_histogram(stat = 'identity', fill = "lightblue4") +
+  geom_hline(yintercept=6, linetype="dashed", color = "red") + 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  xlab("Season") +
+  ylab("Count") + 
+  ggtitle("Number of Hurricanes Per Year")
+```
+
+
+
+```{r}
+# percentage of years that had 6 or more hurricanes per year
+
+sum(filter(hurricanes_per_year, n >= 6)[['n']]) / sum(hurricanes_per_year[['n']]) 
+```
+
+```{r}
+# percentage of years that had exactly 6
+
+sum(filter(hurricanes_per_year, n == 6)[['n']]) / sum(hurricanes_per_year[['n']]) 
+```
+
+
+```{r}
+#Summary statistics for number of hurricanes per year
+summary(hurricanes_per_year['n'])
+```
+
+
+
+Lastly, I checked the claim that 3 of the named storms per year are major hurricanes (categories 3, 4, or 5). A new dataframe, `major`, was created that took the counts of all of the rows in `named` that had wind speeds greater than or equal to 96 as this is considered a major hurricane. 
+
+
+
+
+```{r}
+
+#Number of major hurricanes per year
+#Major hurricanes have wind speeds over 96
+
+major <- named %>%
+            filter(WMO_WIND >= 96) %>%
+            group_by(NAME, SEASON) %>%
+            count() %>%
+            group_by(SEASON) %>%
+            count()
+
+head(major, 5)
+```
+
+
+
+The number of major hurricanes was plotted in a histogram by year. Again, the red line signifies having a count of 3 major hurricanes in a year. Only __45%__ of years had 3 or more hurricanes per year. According to the summary statistics, the median number of hurricanes is 2 hurricanes per year. 
+
+
+
+```{r}
+ggplot(major, aes(x = reorder(SEASON, n), y = n)) + 
+  geom_histogram(stat = 'identity', fill = "lightblue4") +
+  geom_hline(yintercept=3, linetype="dashed", color = "red") + 
+  theme(axis.text.x = element_text(angle = 90)) + 
+  xlab("Season") +
+  ylab("Count") + 
+  ggtitle("Number of Major Hurricanes Per Year")
+```
+
+
+```{r}
+#Summary statistics for number of major hurricanes per year
+summary(major['n'])
+```
+
+```{r}
+#Percentage of hurricanes >= 3 
+#Add 3 to account for the 3 years that had zero major hurricanes
+
+length(filter(major, n >= 3)[['n']]) / (length(major[['n']]) + 3)
+```
+
+
+
+> __Conclusion:__ \
+While the median number of named storms per year is 12, it is important to note that only 55% of years had 12 or more named storms per year. The claim that a typical year has 12 named storms does not completely hold as 45% of years had less than 12 named storms. As for hurricanes, most years do have 6 or more hurricanes (80%) so this claim is supported by our findings. Lastly, most years do __not__ have 3 or more major hurricanes as only 45% of years had 3 or more major hurricanes.  
+
+
+
+---
+
+
+
+## Research Question 3
+
+> 3) September is the most active month (where most of the hurricanes occur), followed by August, and October.
+
+
+
+For this, I wanted to look at the counts of hurricanes per month to see what were the months with the most hurricanes. `hurricanes_only` is a dataframe that contains all of the hurricanes (rows with wind speeds greater than or equal to 64). A summary of this dataframe shows that the median of the months is 9. Making a histogram of `hurricanes_only` based on month showed that month 9 (September) has the most hurricanes. This was followed by months 8 (August) and 10 (October). 
+
+
+
+```{r}
+#Get a table with data of ONLY hurricanes (ie. tropical storms excluded)
+hurricanes_only <- hurricanes %>%
+                    filter(WMO_WIND >= 64)
+
+head(hurricanes_only, 5)
+```
+
+```{r}
+#Summary table of months of hurricanes
+summary(hurricanes_only['MONTH'])
+```
+
+```{r}
+#Histogram of the hurricanes by month 
+
+ggplot(hurricanes_only, aes(x = MONTH)) + 
+  geom_histogram(binwidth = .5, fill = 'lightblue4') + 
+  scale_x_continuous(n.breaks = 10) +
+  ggtitle("Hurricanes by Month")
+```
+
+
+
+Just to verify the visualization above, the dataframe below shows the top three months with the highest hurricane counts. Those months were indeed September, August, and October. 
+
+
+
+
+```{r}
+#Taking counts of hurricanes to see top three most active months
+
+hurricanes_only %>%
+  group_by(MONTH) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  head(3)
+```
+
+
+
+> __Conclusion:__ \
+After looking at the histogram and dataframe of the counts of months with highest hurricane counts, __September, August, and October were the most active months__. This analysis showed the initial claim holds.  
+
+
+
+----
+
+
+
+## Research Question 4
+
+
+
+
+> 4) During the analyzed period (1980-2019), no hurricanes made U.S. landfall before June and after November.
+
+
+
+To see what hurricanes made landfall, I filtered `hurricanes_only` to show only the months before June and after November and checked what rows had `LANDFALL` equal to zero. The resulting table shows hurricane Barbara made landfall. The location being `EP` (Eastern North Pacific) suggests that it could have made landfall in the United States. A map was created to check this. 
+
+
+
+```{r}
+#Checking the hurricanes only table to see if any hurricanes made landfall before June and after November
+
+hurricanes_only %>%
+  filter(MONTH < 6 | MONTH == 12) %>%
+  filter(LANDFALL == 0)
+  
+```
+
+
+
+A map was made displaying the location of hurricanes that occurred before June and after November using latitude and longitudes. Only one hurricane, Barbara, made landfall, however, it did not make U.S landfall. 
+
+
+
+```{r}
+#Plot the longitudes and latitudes of storms to see if any made US landfall
+
+world + 
+  geom_point(data = filter(hurricanes_only, MONTH < 6 | MONTH == 12), aes(x = LON, y = LAT, color = NAME)) +
+  xlim(c(-150, -20)) + 
+  ylim(c(0, 90)) + 
+  ggtitle('Hurricanes Before June and After November')
+
+```
+
+
+
+> __Conclusion:__ \
+In conclusion, __no hurricanes made U.S. landfall before June and after November__. Looking at the map of hurricanes that occurred before and after November confirms that no hurricanes made landfall in the United States. 
+
+
+
+---
+
+
+
+### Link to Video: <https://berkeley.zoom.us/rec/share/zSRBoxwtW0aLMVO2-VtKSIv1N0YhB_Iri81v5ScrszH4XR85AYawtCeQmsQvs-Vk.uYDEpuAaYZ8zaSGT?startTime=1601773229000> 
+
+
+
+
