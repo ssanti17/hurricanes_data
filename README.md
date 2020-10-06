@@ -19,7 +19,7 @@
       A) A typical hurricane season (during a calendar year) runs from June through November,but occasionally storms form outside those months.
       B) A typical year has 12 named storms, including six hurricanes of which three become major hurricanes (category 3, 4, and 5).
       C) September is the most active month (where most of the hurricanes occur), followed by August, and October.
-      D) During the analyzed period (1980-2019), no hurricanes made U.S. landfall before Juneand after November.
+      D) During the analyzed period (1980-2019), no hurricanes made U.S. landfall before June and after November.
       
 
 
