@@ -17,7 +17,7 @@
 - My use of EDA helped either confirm or deny the following claims:
 
       A) A typical hurricane season (during a calendar year) runs from June through November,but occasionally storms form outside those months.
-      B) A typical year has 12 named storms, including six hurricanes of which three becomemajor hurricanes (category 3, 4, and 5).
+      B) A typical year has 12 named storms, including six hurricanes of which three become major hurricanes (category 3, 4, and 5).
       C) September is the most active month (where most of the hurricanes occur), followed byAugust, and October.
       D) During the analyzed period (1980-2019), no hurricanes made U.S. landfall before Juneand after November.
       
